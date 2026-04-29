@@ -1,0 +1,25 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.5" stop-color="#7C2D12"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 270) rotate(90) scale(300 300)">
+      <stop stop-color="#FDE68A" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FDE68A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="800" rx="64" fill="url(#bg)"/>
+  <circle cx="600" cy="260" r="250" fill="url(#glow)"/>
+  <path d="M250 650L420 330C456 264 495 248 540 248H660C705 248 744 264 780 330L950 650H250Z" fill="#1F2937"/>
+  <path d="M360 650L470 410C485 376 507 360 540 360H660C693 360 715 376 730 410L840 650H360Z" fill="#334155"/>
+  <path d="M500 360C544 294 573 270 600 224C628 270 656 294 700 360L660 440H540L500 360Z" fill="#E11D48"/>
+  <path d="M540 360C557 330 576 312 600 278C624 312 643 330 660 360L640 420H560L540 360Z" fill="#F59E0B"/>
+  <path d="M585 180C575 125 605 95 640 72C650 122 685 152 710 170C675 190 646 224 630 270C620 230 605 204 585 180Z" fill="#FB7185"/>
+  <circle cx="505" cy="130" r="18" fill="#FDE68A"/>
+  <circle cx="745" cy="120" r="16" fill="#FDE68A"/>
+  <circle cx="635" cy="82" r="14" fill="#FDE68A"/>
+  <text x="600" y="735" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="68" font-weight="700">Projeto Vulcao</text>
+  <text x="600" y="775" text-anchor="middle" fill="#FDE68A" font-family="Arial, sans-serif" font-size="28">Experimento com cores quentes e erupcao</text>
+</svg>
