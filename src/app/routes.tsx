@@ -5,18 +5,23 @@ import { Login } from "./pages/Login.tsx";
 import { ProjectDetails } from "./pages/ProjectDetails.tsx";
 import { TeacherDashboard } from "./pages/TeacherDashboard.tsx";
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: "/login",
+      Component: Login,
+    },
+    {
+      path: "/",
+      Component: Layout,
+      children: [
+        { index: true, Component: Dashboard },
+        { path: "project/:id", Component: ProjectDetails },
+        { path: "teacher", Component: TeacherDashboard },
+      ],
+    },
+  ],
   {
-    path: "/login",
-    Component: Login,
-  },
-  {
-    path: "/",
-    Component: Layout,
-    children: [
-      { index: true, Component: Dashboard },
-      { path: "project/:id", Component: ProjectDetails },
-      { path: "teacher", Component: TeacherDashboard },
-    ],
-  },
-]);
+    basename: import.meta.env.BASE_URL,
+  }
+);
