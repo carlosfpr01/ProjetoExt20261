@@ -3,12 +3,17 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+const backendApiTarget = 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev'
+
 export default defineConfig({
   base: '/ProjetoExt20261/',
+  define: {
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(backendApiTarget),
+  },
   server: {
     proxy: {
       '/api': {
-        target: 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev',
+        target: backendApiTarget,
         changeOrigin: true,
         secure: false,
         rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
