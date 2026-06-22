@@ -1,10 +1,10 @@
-const fallbackBaseUrl = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL;
+const apiBaseUrl = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL;
 
-if (!fallbackBaseUrl) {
-  throw new Error('VITE_API_BASE_URL não está configurada.');
+if (!apiBaseUrl) {
+  throw new Error('VITE_API_BASE_URL is not configured.');
 }
 
-const API_BASE_URL = fallbackBaseUrl.replace(/\/$/, '');
+const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
 
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
 
