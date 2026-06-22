@@ -1,118 +1,205 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router';
-import { GraduationCap, Mail, Lock, AlertCircle, LogIn, ArrowRight } from 'lucide-react';
+import { ArrowRight, GraduationCap, KeyRound, Lock, LogIn, Mail, UserPlus } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const Login = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login, register, loading, error, clearError } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  const handleTeacherLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    login('professor', email || 'professor@escola.com');
-    navigate('/');
+  const [inviteToken, setInviteToken] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      await login({ email, senha: password });
+      navigate('/');
+    } catch {
+      return;
+    }
   };
 
-  const handleStudentLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    login('aluno', email || 'aluno@escola.com');
-    navigate('/');
+  const handleRegister = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      await register({ token: inviteToken, email: registerEmail, senha: registerPassword });
+      navigate('/');
+    } catch {
+      return;
+    }
+  };
+
+  const handleFieldChange = (setter: (value: string) => void) => (value: string) => {
+    if (error) clearError();
+    setter(value);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-blue-700 py-8 px-8 flex flex-col items-center">
-          <div className="bg-white/20 p-4 rounded-full mb-4 ring-4 ring-blue-500/30">
-            <GraduationCap className="h-10 w-10 text-white" />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_55%)] flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="rounded-3xl bg-slate-950 text-white shadow-2xl overflow-hidden border border-slate-800">
+          <div className="p-8 md:p-10 space-y-6">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100">
+              Feira de Ciencias
+            </span>
+            <div className="space-y-3">
+              <h1 className="text-4xl font-bold tracking-tight">EduProjetos conectado ao sistema real.</h1>
+              <p className="max-w-xl text-sm leading-6 text-slate-300">
+                O acesso usa autenticação por token e o cadastro depende do convite recebido.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h2 className="text-sm font-semibold text-cyan-100">Login</h2>
+                <p className="mt-2 text-sm text-slate-300">Professores, admins e alunos entram com email e senha cadastrados.</p>
+              </article>
+              <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h2 className="text-sm font-semibold text-cyan-100">Convites</h2>
+                <p className="mt-2 text-sm text-slate-300">Professores geram convite de aluno. Admin gera convite de professor.</p>
+              </article>
+              <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h2 className="text-sm font-semibold text-cyan-100">Cadastro</h2>
+                <p className="mt-2 text-sm text-slate-300">O convidado finaliza o cadastro com token, email e senha na própria tela.</p>
+              </article>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-white text-center tracking-tight">EduProjetos</h1>
-          <p className="text-blue-100 text-center mt-2 font-medium opacity-90">Plataforma Educacional de Gestão</p>
-        </div>
-        
-        <div className="p-8 space-y-8">
-          <form className="space-y-6">
-            <div className="space-y-4">
+        </section>
+
+        <section className="rounded-3xl bg-white shadow-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-200 px-8 py-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-blue-600 p-3 text-white">
+                <GraduationCap className="h-7 w-7" />
+              </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="email">
-                  E-mail institucional
-                </label>
+                <h2 className="text-2xl font-bold text-slate-900">Entrar ou concluir cadastro</h2>
+                <p className="text-sm text-slate-500">Use suas credenciais para entrar.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-8 p-8 lg:grid-cols-2">
+            <form className="space-y-5" onSubmit={handleLogin}>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Entrar</h3>
+                <p className="text-sm text-slate-500">Acesse sua conta com email e senha.</p>
+              </div>
+
+              <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                <span>Email</span>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    id="email"
                     type="email"
+                    required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                    onChange={event => handleFieldChange(setEmail)(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="voce@escola.com"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="password">
-                  Senha
-                </label>
+              </label>
+
+              <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                <span>Senha</span>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    id="password"
                     type="password"
+                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
-                    placeholder="••••••••"
+                    onChange={event => handleFieldChange(setPassword)(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Sua senha"
                   />
                 </div>
-              </div>
-            </div>
+              </label>
 
-            <div className="flex flex-col gap-3">
               <button
-                onClick={handleTeacherLogin}
-                type="button"
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <LogIn className="h-4 w-4" />
-                Entrar como Professor
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
-              
-              <button
-                onClick={handleStudentLogin}
-                type="button"
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-blue-200 rounded-xl shadow-sm text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-200 transition-colors"
-              >
-                <GraduationCap className="h-4 w-4" />
-                Entrar como Aluno
-              </button>
-            </div>
-          </form>
+            </form>
 
-          <div className="mt-8 border-t border-gray-100 pt-6 space-y-4">
-            <div className="flex items-center justify-between group cursor-pointer">
-              <span className="text-sm font-medium text-gray-600 group-hover:text-blue-700 transition-colors">
-                É professor e não tem conta?
-              </span>
-              <a href="#" className="text-sm font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1">
-                Criar conta de Professor <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-            
-            <div className="bg-amber-50 rounded-xl p-4 flex gap-3 items-start border border-amber-100">
-              <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800 font-medium">
-                Alunos: O acesso é exclusivo via convite. Solicitem o acesso ao seu professor para poderem utilizar a plataforma.
-              </p>
-            </div>
+            <form className="space-y-5" onSubmit={handleRegister}>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Cadastro por convite</h3>
+                <p className="text-sm text-slate-500">Conclua o cadastro e entre automaticamente.</p>
+              </div>
+
+              <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                <span>Token de convite</span>
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={inviteToken}
+                    onChange={event => handleFieldChange(setInviteToken)(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Cole o token recebido"
+                  />
+                </div>
+              </label>
+
+              <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                <span>Email</span>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    value={registerEmail}
+                    onChange={event => handleFieldChange(setRegisterEmail)(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="novo.usuario@escola.com"
+                  />
+                </div>
+              </label>
+
+              <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                <span>Senha</span>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={registerPassword}
+                    onChange={event => handleFieldChange(setRegisterPassword)(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Minimo de 6 caracteres"
+                  />
+                </div>
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <UserPlus className="h-4 w-4" />
+                {loading ? 'Concluindo cadastro...' : 'Concluir cadastro'}
+              </button>
+            </form>
           </div>
-        </div>
+
+          <div className="border-t border-slate-200 px-8 py-5 text-sm text-slate-500">
+            Professores distribuem o token para alunos. Admin distribui token para professores.
+            <span className="ml-2 inline-flex items-center gap-1 font-medium text-blue-700">
+              Fluxo orientado pelo sistema
+              <ArrowRight className="h-4 w-4" />
+            </span>
+          </div>
+        </section>
       </div>
     </div>
   );

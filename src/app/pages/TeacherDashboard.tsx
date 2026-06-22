@@ -1,47 +1,53 @@
 import React, { useMemo, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
 import { Navigate } from 'react-router';
-import { UserPlus, Users, Search, Mail, BookOpen, Fingerprint, Pencil, Trash2, Shield, CalendarDays } from 'lucide-react';
+import {
+  CalendarDays,
+  KeyRound,
+  Mail,
+  Pencil,
+  RefreshCcw,
+  Shield,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useData, type Evento, type Usuario } from '../context/DataContext';
+import { SCHOOL_GRADE_OPTIONS, isSchoolGrade, toSchoolGradeLabel, type SchoolGrade } from '../lib/schoolGrades';
+import { useConfirmation } from '../context/ConfirmationContext';
+import { toast } from 'sonner';
 
 export const TeacherDashboard = () => {
   const { user } = useAuth();
-  const { usuarios, eventos, addUsuario, updateUsuario, removeUsuario, addEvento, updateEvento, removeEvento } = useData();
+  const { confirm } = useConfirmation();
+  const {
+    usuarios,
+    convites,
+    eventos,
+    loading,
+    error,
+    refreshAll,
+    updateUsuario,
+    removeUsuario,
+    resetSenhaUsuario,
+    createConviteAluno,
+    createConviteProfessor,
+    removeConvite,
+    addEvento,
+    updateEvento,
+    updateEventoCapa,
+    removeEventoCapa,
+    removeEvento,
+  } = useData();
 
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [matricula, setMatricula] = useState('');
-  const [anoEscolar, setAnoEscolar] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
-  const [editingStudentNome, setEditingStudentNome] = useState('');
-  const [editingStudentEmail, setEditingStudentEmail] = useState('');
-  const [editingStudentMatricula, setEditingStudentMatricula] = useState('');
-  const [editingStudentAno, setEditingStudentAno] = useState('');
-
-  const [profNome, setProfNome] = useState('');
-  const [profEmail, setProfEmail] = useState('');
-  const [profMateria, setProfMateria] = useState('');
-  const [editingProfessorId, setEditingProfessorId] = useState<string | null>(null);
-  const [editingProfessorNome, setEditingProfessorNome] = useState('');
-  const [editingProfessorEmail, setEditingProfessorEmail] = useState('');
-  const [editingProfessorMateria, setEditingProfessorMateria] = useState('');
-
-  const [eventoNome, setEventoNome] = useState('');
-  const [eventoDescricao, setEventoDescricao] = useState('');
-  const [eventoInicio, setEventoInicio] = useState('');
-  const [eventoFim, setEventoFim] = useState('');
-  const [eventoStatus, setEventoStatus] = useState<'ativo' | 'inativo'>('ativo');
-  const [eventoImagemCapa, setEventoImagemCapa] = useState('/sample-images/science-fair.svg');
-
+  const [studentInvite, setStudentInvite] = useState<{ nome: string; matricula: string; anoEscolar: SchoolGrade | '' }>({ nome: '', matricula: '', anoEscolar: '' });
+  const [teacherInvite, setTeacherInvite] = useState({ nome: '', disciplina: '' });
+  const [eventForm, setEventForm] = useState({ nome: '', descricao: '', data_inicio: '', data_fim: '', capa: null as File | null });
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<{ nome: string; email: string; matricula: string; ano_escolar: SchoolGrade | ''; materia: string }>({ nome: '', email: '', matricula: '', ano_escolar: '', materia: '' });
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [editingEventNome, setEditingEventNome] = useState('');
-  const [editingEventDescricao, setEditingEventDescricao] = useState('');
-  const [editingEventInicio, setEditingEventInicio] = useState('');
-  const [editingEventFim, setEditingEventFim] = useState('');
-  const [editingEventStatus, setEditingEventStatus] = useState<'ativo' | 'inativo'>('ativo');
-  const [editingEventImagemCapa, setEditingEventImagemCapa] = useState('/sample-images/science-fair.svg');
+  const [editingEvent, setEditingEvent] = useState({ nome: '', descricao: '', data_inicio: '', data_fim: '', status: 'ativo' as 'ativo' | 'inativo' });
 
   if (!user || user.tipo_usuario !== 'professor') {
     return <Navigate to="/" replace />;
@@ -49,536 +55,448 @@ export const TeacherDashboard = () => {
 
   const isAdmin = Boolean(user.is_adm);
 
-  const alunos = useMemo(() => usuarios.filter(u => u.tipo_usuario === 'aluno'), [usuarios]);
-  const professores = useMemo(() => usuarios.filter(u => u.tipo_usuario === 'professor'), [usuarios]);
-
-  const filteredStudents = alunos.filter(s =>
-    s.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.matricula && s.matricula.includes(searchTerm))
-  );
-
-  const canManageStudent = (studentId: string) => isAdmin || alunos.some(s => s.id === studentId && s.criado_por_id === user.id);
-
-  const handleSubmitStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nome || !email || !anoEscolar || !matricula) return;
-
-    addUsuario({
-      nome,
-      email,
-      tipo_usuario: 'aluno',
-      matricula,
-      ano_escolar: anoEscolar,
-      criado_por_id: user.id,
+  const filteredUsers = useMemo(() => {
+    const normalized = searchTerm.trim().toLowerCase();
+    if (!normalized) return usuarios;
+    return usuarios.filter(candidate => {
+      const stack = [candidate.nome, candidate.email, candidate.matricula ?? '', candidate.ano_escolar ?? '', candidate.materia ?? '']
+        .join(' ')
+        .toLowerCase();
+      return stack.includes(normalized);
     });
+  }, [searchTerm, usuarios]);
 
-    setNome('');
-    setEmail('');
-    setMatricula('');
-    setAnoEscolar('');
+  const copyToken = async (value: string) => {
+    await navigator.clipboard.writeText(value);
   };
 
-  const startEditStudent = (studentId: string) => {
-    const student = alunos.find(a => a.id === studentId);
-    if (!student) return;
-    setEditingStudentId(student.id);
-    setEditingStudentNome(student.nome);
-    setEditingStudentEmail(student.email);
-    setEditingStudentMatricula(student.matricula ?? '');
-    setEditingStudentAno(student.ano_escolar ?? '');
-  };
-
-  const saveEditStudent = () => {
-    if (!editingStudentId) return;
-    updateUsuario(editingStudentId, {
-      nome: editingStudentNome,
-      email: editingStudentEmail,
-      matricula: editingStudentMatricula,
-      ano_escolar: editingStudentAno,
-      tipo_usuario: 'aluno',
+  const startUserEdit = (target: Usuario) => {
+    setEditingUserId(target.id);
+    setEditingUser({
+      nome: target.nome,
+      email: target.email,
+      matricula: target.matricula ?? '',
+      ano_escolar: target.ano_escolar && isSchoolGrade(target.ano_escolar) ? target.ano_escolar : '',
+      materia: target.materia ?? '',
     });
-    setEditingStudentId(null);
   };
 
-  const handleCreateProfessor = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin || !profNome || !profEmail || !profMateria) return;
-    addUsuario({
-      nome: profNome,
-      email: profEmail,
-      materia: profMateria,
-      tipo_usuario: 'professor',
-      is_adm: false,
-      criado_por_id: user.id,
+  const startEventEdit = (target: Evento) => {
+    setEditingEventId(target.id);
+    setEditingEvent({
+      nome: target.nome,
+      descricao: target.descricao ?? '',
+      data_inicio: target.data_inicio,
+      data_fim: target.data_fim,
+      status: target.status,
     });
-    setProfNome('');
-    setProfEmail('');
-    setProfMateria('');
   };
 
-  const startEditProfessor = (professorId: string) => {
-    const professor = professores.find(p => p.id === professorId);
-    if (!professor) return;
-    setEditingProfessorId(professor.id);
-    setEditingProfessorNome(professor.nome);
-    setEditingProfessorEmail(professor.email);
-    setEditingProfessorMateria(professor.materia ?? '');
+  const handleCreateStudentInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = await createConviteAluno(studentInvite);
+    if (token) {
+      toast.success('Convite de aluno gerado.', {
+        description: token,
+        action: {
+          label: 'Copiar',
+          onClick: () => copyToken(token),
+        },
+      });
+      setStudentInvite({ nome: '', matricula: '', anoEscolar: '' });
+    }
   };
 
-  const saveEditProfessor = () => {
-    if (!editingProfessorId || !isAdmin) return;
-    updateUsuario(editingProfessorId, {
-      nome: editingProfessorNome,
-      email: editingProfessorEmail,
-      materia: editingProfessorMateria,
-      tipo_usuario: 'professor',
+  const handleCreateTeacherInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = await createConviteProfessor(teacherInvite);
+    if (token) {
+      toast.success('Convite de professor gerado.', {
+        description: token,
+        action: {
+          label: 'Copiar',
+          onClick: () => copyToken(token),
+        },
+      });
+      setTeacherInvite({ nome: '', disciplina: '' });
+    }
+  };
+
+  const handleCreateEvent = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await addEvento(eventForm);
+    setEventForm({ nome: '', descricao: '', data_inicio: '', data_fim: '', capa: null });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUserId) return;
+    const confirmed = await confirm({
+      title: 'Confirmar edicao de usuario',
+      description: 'Deseja salvar as alteracoes deste usuario?',
+      confirmText: 'Salvar alteracoes',
     });
-    setEditingProfessorId(null);
+    if (!confirmed) return;
+    await updateUsuario(editingUserId, editingUser);
+    setEditingUserId(null);
   };
 
-  const handleCreateEvent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin || !eventoNome || !eventoInicio || !eventoFim) return;
-    addEvento({
-      nome: eventoNome,
-      descricao: eventoDescricao,
-      imagem_capa: eventoImagemCapa,
-      data_inicio: eventoInicio,
-      data_fim: eventoFim,
-      status: eventoStatus,
-      criado_por_id: user.id,
+  const handleSaveEvent = async () => {
+    if (!editingEventId) return;
+    const confirmed = await confirm({
+      title: 'Confirmar edicao de evento',
+      description: 'Deseja salvar as alteracoes deste evento?',
+      confirmText: 'Salvar alteracoes',
     });
-    setEventoNome('');
-    setEventoDescricao('');
-    setEventoInicio('');
-    setEventoFim('');
-    setEventoStatus('ativo');
-    setEventoImagemCapa('/sample-images/science-fair.svg');
-  };
-
-  const startEditEvent = (eventId: string) => {
-    const event = eventos.find(e => e.id === eventId);
-    if (!event) return;
-    setEditingEventId(event.id);
-    setEditingEventNome(event.nome);
-    setEditingEventDescricao(event.descricao ?? '');
-    setEditingEventInicio(event.data_inicio);
-    setEditingEventFim(event.data_fim);
-    setEditingEventStatus(event.status);
-    setEditingEventImagemCapa(event.imagem_capa ?? '/sample-images/science-fair.svg');
-  };
-
-  const saveEditEvent = () => {
-    if (!editingEventId || !isAdmin) return;
-    updateEvento(editingEventId, {
-      nome: editingEventNome,
-      descricao: editingEventDescricao,
-      imagem_capa: editingEventImagemCapa,
-      data_inicio: editingEventInicio,
-      data_fim: editingEventFim,
-      status: editingEventStatus,
-    });
+    if (!confirmed) return;
+    await updateEvento(editingEventId, editingEvent);
     setEditingEventId(null);
+  };
+
+  const handleRemoveConvite = async (conviteId: string) => {
+    const confirmed = await confirm({
+      title: 'Cancelar convite',
+      description: 'Tem certeza que deseja cancelar este convite?',
+      confirmText: 'Cancelar convite',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await removeConvite(conviteId);
+  };
+
+  const handleRemoveUsuario = async (usuarioId: string) => {
+    const confirmed = await confirm({
+      title: 'Excluir usuario',
+      description: 'Esta acao remove o usuario e seus vinculos de projetos. Deseja continuar?',
+      confirmText: 'Excluir usuario',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await removeUsuario(usuarioId);
+  };
+
+  const handleRemoveEventoCapa = async (eventoId: string) => {
+    const confirmed = await confirm({
+      title: 'Remover capa do evento',
+      description: 'Deseja remover a capa deste evento?',
+      confirmText: 'Remover capa',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await removeEventoCapa(eventoId);
+  };
+
+  const handleRemoveEvento = async (eventoId: string) => {
+    const confirmed = await confirm({
+      title: 'Excluir evento',
+      description: 'Esta acao pode afetar projetos vinculados. Deseja realmente excluir?',
+      confirmText: 'Excluir evento',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await removeEvento(eventoId);
+  };
+
+  const handleResetPassword = async (id: string) => {
+    const novaSenha = await resetSenhaUsuario(id);
+    if (novaSenha) {
+      toast.success('Senha temporaria gerada.', {
+        description: novaSenha,
+        action: {
+          label: 'Copiar',
+          onClick: () => copyToken(novaSenha),
+        },
+      });
+    }
   };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Painel do Professor</h1>
-        <p className="text-gray-500 mt-1">
-          CRUD dinâmico por contexto: cadastro de alunos, professores e eventos.
-        </p>
-      </div>
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Painel de gestao</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Professores geram convites de alunos. Admin tambem gerencia convites de professores e eventos.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => refreshAll()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Atualizar dados
+          </button>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 sticky top-24">
-            <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2 border-b pb-4">
-              <UserPlus className="h-5 w-5 text-blue-600" />
-              Cadastrar Novo Aluno
-            </h2>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-bold text-slate-900">Gerar convite de aluno</h2>
+          </div>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreateStudentInvite}>
+            <input
+              required
+              value={studentInvite.nome}
+              onChange={event => setStudentInvite(prev => ({ ...prev, nome: event.target.value }))}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:col-span-2"
+              placeholder="Nome do aluno"
+            />
+            <input
+              required
+              value={studentInvite.matricula}
+              onChange={event => setStudentInvite(prev => ({ ...prev, matricula: event.target.value }))}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Matricula"
+            />
+            <select
+              required
+              value={studentInvite.anoEscolar}
+              onChange={event => setStudentInvite(prev => ({ ...prev, anoEscolar: event.target.value }))}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">Selecione a serie</option>
+              {SCHOOL_GRADE_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+            >
+              Gerar token de aluno
+            </button>
+          </form>
+        </section>
 
-            <form onSubmit={handleSubmitStudent} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="nome">
-                  Nome Completo
-                </label>
-                <input
-                  id="nome"
-                  type="text"
-                  required
-                  value={nome}
-                  onChange={e => setNome(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                  E-mail do Aluno
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="matricula">
-                  Matricula
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Fingerprint className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    id="matricula"
-                    type="text"
-                    required
-                    value={matricula}
-                    onChange={e => setMatricula(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="anoEscolar">
-                  Serie / Ano Escolar
-                </label>
-                <select
-                  id="anoEscolar"
-                  required
-                  value={anoEscolar}
-                  onChange={e => setAnoEscolar(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="" disabled>Selecione a serie</option>
-                  <option value="6 Ano">6 Ano</option>
-                  <option value="7 Ano">7 Ano</option>
-                  <option value="8 Ano">8 Ano</option>
-                  <option value="9 Ano">9 Ano</option>
-                  <option value="1 Ano Medio">1 Ano Medio</option>
-                  <option value="2 Ano Medio">2 Ano Medio</option>
-                  <option value="3 Ano Medio">3 Ano Medio</option>
-                </select>
-              </div>
-
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-slate-900" />
+            <h2 className="text-lg font-bold text-slate-900">Gerar convite de professor</h2>
+          </div>
+          {isAdmin ? (
+            <form className="grid gap-4" onSubmit={handleCreateTeacherInvite}>
+              <input
+                required
+                value={teacherInvite.nome}
+                onChange={event => setTeacherInvite(prev => ({ ...prev, nome: event.target.value }))}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Nome do professor"
+              />
+              <input
+                required
+                value={teacherInvite.disciplina}
+                onChange={event => setTeacherInvite(prev => ({ ...prev, disciplina: event.target.value }))}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Disciplina"
+              />
               <button
                 type="submit"
-                className="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                disabled={loading}
+                className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Cadastrar Aluno
+                Gerar token de professor
               </button>
             </form>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-full">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Users className="h-5 w-5 text-gray-600" />
-                Meus Alunos ({alunos.length})
-              </h2>
-
-              <div className="relative w-full sm:w-64">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Buscar aluno..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {filteredStudents.length === 0 ? (
-                <div className="py-12 text-center text-gray-500">Nenhum aluno encontrado.</div>
-              ) : (
-                filteredStudents.map(student => {
-                  const canManage = canManageStudent(student.id);
-                  const isEditing = editingStudentId === student.id;
-
-                  return (
-                    <div key={student.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                      {isEditing ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <input
-                            value={editingStudentNome}
-                            onChange={e => setEditingStudentNome(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Nome"
-                          />
-                          <input
-                            value={editingStudentEmail}
-                            onChange={e => setEditingStudentEmail(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Email"
-                          />
-                          <input
-                            value={editingStudentMatricula}
-                            onChange={e => setEditingStudentMatricula(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Matricula"
-                          />
-                          <input
-                            value={editingStudentAno}
-                            onChange={e => setEditingStudentAno(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg"
-                            placeholder="Ano escolar"
-                          />
-                          <div className="md:col-span-2 flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setEditingStudentId(null)}
-                              className="px-3 py-1.5 text-sm border border-gray-300 rounded-md"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={saveEditStudent}
-                              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md"
-                            >
-                              Salvar
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-sm">{student.nome}</h3>
-                            <p className="text-xs text-gray-500 mt-0.5">{student.email}</p>
-                            <p className="text-xs text-gray-400 mb-2">Matricula: {student.matricula}</p>
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-100/50 px-2 py-0.5 rounded-full border border-blue-200/50">
-                              <BookOpen className="h-3 w-3" />
-                              {student.ano_escolar}
-                            </span>
-                          </div>
-
-                          {canManage && (
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => startEditStudent(student.id)}
-                                className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-white"
-                                title="Editar aluno"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeUsuario(student.id)}
-                                className="p-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50"
-                                title="Excluir aluno"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
+          ) : (
+            <p className="text-sm text-slate-500">Apenas ADMIN pode emitir convites de professor.</p>
+          )}
+        </section>
       </div>
 
-      {isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Shield className="h-5 w-5 text-emerald-600" />
-              Cadastro de Professor
-            </h2>
-
-            <form onSubmit={handleCreateProfessor} className="grid grid-cols-1 gap-3">
-              <input
-                value={profNome}
-                onChange={e => setProfNome(e.target.value)}
-                placeholder="Nome"
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                required
-              />
-              <input
-                value={profEmail}
-                onChange={e => setProfEmail(e.target.value)}
-                placeholder="Email"
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                required
-              />
-              <input
-                value={profMateria}
-                onChange={e => setProfMateria(e.target.value)}
-                placeholder="Materia"
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                required
-              />
-              <button className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700" type="submit">
-                Cadastrar Professor
-              </button>
-            </form>
-
-            <div className="space-y-2">
-              {professores.map(prof => (
-                <div key={prof.id} className="border border-gray-200 rounded-lg p-3">
-                  {editingProfessorId === prof.id ? (
-                    <div className="space-y-2">
-                      <input
-                        value={editingProfessorNome}
-                        onChange={e => setEditingProfessorNome(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                      <input
-                        value={editingProfessorEmail}
-                        onChange={e => setEditingProfessorEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                      <input
-                        value={editingProfessorMateria}
-                        onChange={e => setEditingProfessorMateria(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => setEditingProfessorId(null)} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm">Cancelar</button>
-                        <button type="button" onClick={saveEditProfessor} className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm">Salvar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{prof.nome}</p>
-                        <p className="text-xs text-gray-500">{prof.email}</p>
-                        <p className="text-xs text-gray-500">Materia: {prof.materia}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => startEditProfessor(prof.id)} className="p-2 rounded-md border border-gray-300 text-gray-600">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        {prof.id !== user.id && (
-                          <button type="button" onClick={() => removeUsuario(prof.id)} className="p-2 rounded-md border border-red-200 text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <KeyRound className="h-5 w-5 text-amber-600" />
+          <h2 className="text-lg font-bold text-slate-900">Convites emitidos</h2>
+        </div>
+        <div className="space-y-3">
+          {convites.length === 0 ? (
+            <p className="text-sm text-slate-500">Nenhum convite retornado.</p>
+          ) : (
+            convites.map(convite => (
+              <div key={convite.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold text-slate-900">{convite.nomeConvidado}</p>
+                  <p className="text-sm text-slate-500">Status: {convite.status}</p>
+                  {convite.token && <p className="mt-1 break-all text-xs text-slate-500">{convite.token}</p>}
                 </div>
-              ))}
-            </div>
+                <div className="flex gap-2">
+                  {convite.token && (
+                    <button
+                      type="button"
+                      onClick={() => copyToken(convite.token ?? '')}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Copiar token
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveConvite(convite.id)}
+                    className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
+                  >
+                    Cancelar convite
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Users className="h-5 w-5 text-blue-600" />
+              Usuarios acessiveis
+            </h2>
+            <p className="text-sm text-slate-500">Gestao de usuarios com edicao, exclusao e reset de senha.</p>
+          </div>
+          <div className="relative w-full max-w-sm">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+              className="w-full rounded-2xl border border-slate-300 px-10 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Buscar nome, email, matricula..."
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredUsers.map(candidate => {
+            const isEditing = editingUserId === candidate.id;
+            return (
+              <div key={candidate.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                {isEditing ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <input value={editingUser.nome} onChange={event => setEditingUser(prev => ({ ...prev, nome: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="Nome" />
+                    <input value={editingUser.email} onChange={event => setEditingUser(prev => ({ ...prev, email: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="Email" />
+                    {candidate.tipo_usuario === 'aluno' ? (
+                      <>
+                        <input value={editingUser.matricula} onChange={event => setEditingUser(prev => ({ ...prev, matricula: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="Matricula" />
+                        <select value={editingUser.ano_escolar} onChange={event => setEditingUser(prev => ({ ...prev, ano_escolar: event.target.value as SchoolGrade | '' }))} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm">
+                          <option value="">Selecione a serie</option>
+                          {SCHOOL_GRADE_OPTIONS.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : (
+                      <input value={editingUser.materia} onChange={event => setEditingUser(prev => ({ ...prev, materia: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm md:col-span-2" placeholder="Materia" />
+                    )}
+                    <div className="flex gap-2 md:col-span-2 md:justify-end">
+                      <button type="button" onClick={() => setEditingUserId(null)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700">Cancelar</button>
+                      <button type="button" onClick={handleSaveUser} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Salvar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-900">{candidate.nome}</p>
+                      <p className="text-sm text-slate-500">{candidate.email}</p>
+                      <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+                        {candidate.is_adm ? 'ADMIN' : candidate.tipo_usuario}
+                        {candidate.matricula ? ` • Matricula ${candidate.matricula}` : ''}
+                        {candidate.ano_escolar ? ` • ${toSchoolGradeLabel(candidate.ano_escolar)}` : ''}
+                        {candidate.materia ? ` • ${candidate.materia}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => startUserEdit(candidate)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
+                        <Pencil className="h-4 w-4" />
+                        Editar
+                      </button>
+                      <button type="button" onClick={() => handleResetPassword(candidate.id)} className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-50">
+                        Resetar senha
+                      </button>
+                      {candidate.id !== user.id && (
+                        <button type="button" onClick={() => handleRemoveUsuario(candidate.id)} className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50">
+                          <Trash2 className="h-4 w-4" />
+                          Excluir
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {isAdmin && (
+        <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <CalendarDays className="h-5 w-5 text-blue-600" />
+              Eventos
+            </h2>
+            <p className="text-sm text-slate-500">Gestao de eventos com suporte a capa e ajustes dedicados.</p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-violet-600" />
-              Evento (Cadastrar, Ajustar, Excluir)
-            </h2>
+          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleCreateEvent}>
+            <input required value={eventForm.nome} onChange={event => setEventForm(prev => ({ ...prev, nome: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="Nome do evento" />
+            <input type="file" accept="image/*" onChange={event => setEventForm(prev => ({ ...prev, capa: event.target.files?.[0] ?? null }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" />
+            <textarea value={eventForm.descricao} onChange={event => setEventForm(prev => ({ ...prev, descricao: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm lg:col-span-2" rows={3} placeholder="Descricao" />
+            <input type="date" required value={eventForm.data_inicio} onChange={event => setEventForm(prev => ({ ...prev, data_inicio: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" />
+            <input type="date" required value={eventForm.data_fim} onChange={event => setEventForm(prev => ({ ...prev, data_fim: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" />
+            <button type="submit" className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 lg:col-span-2">Criar evento</button>
+          </form>
 
-            <form onSubmit={handleCreateEvent} className="grid grid-cols-1 gap-3">
-              <input
-                value={eventoNome}
-                onChange={e => setEventoNome(e.target.value)}
-                placeholder="Nome do evento"
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                required
-              />
-              <textarea
-                value={eventoDescricao}
-                onChange={e => setEventoDescricao(e.target.value)}
-                placeholder="Descricao"
-                className="px-3 py-2 border border-gray-300 rounded-lg min-h-20"
-              />
-              <select value={eventoImagemCapa} onChange={e => setEventoImagemCapa(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white">
-                <option value="/sample-images/science-fair.svg">Feira de Ciencias</option>
-                <option value="/sample-images/project-volcano.svg">Projeto Vulcao</option>
-                <option value="/sample-images/diary-lab.svg">Diario de Bordo</option>
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={eventoInicio} onChange={e => setEventoInicio(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg" required />
-                <input type="date" value={eventoFim} onChange={e => setEventoFim(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg" required />
-              </div>
-              <select value={eventoStatus} onChange={e => setEventoStatus(e.target.value as 'ativo' | 'inativo')} className="px-3 py-2 border border-gray-300 rounded-lg bg-white">
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-              </select>
-              <button className="px-4 py-2 rounded-lg bg-violet-600 text-white font-semibold hover:bg-violet-700" type="submit">
-                Cadastrar Evento
-              </button>
-            </form>
-
-            <div className="space-y-2">
-              {eventos.map(evento => (
-                <div key={evento.id} className="border border-gray-200 rounded-lg p-3">
-                  {editingEventId === evento.id ? (
-                    <div className="space-y-2">
-                      <input value={editingEventNome} onChange={e => setEditingEventNome(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                      <textarea value={editingEventDescricao} onChange={e => setEditingEventDescricao(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-20" />
-                      <select value={editingEventImagemCapa} onChange={e => setEditingEventImagemCapa(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
-                        <option value="/sample-images/science-fair.svg">Feira de Ciencias</option>
-                        <option value="/sample-images/project-volcano.svg">Projeto Vulcao</option>
-                        <option value="/sample-images/diary-lab.svg">Diario de Bordo</option>
-                      </select>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input type="date" value={editingEventInicio} onChange={e => setEditingEventInicio(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg" />
-                        <input type="date" value={editingEventFim} onChange={e => setEditingEventFim(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg" />
-                      </div>
-                      <select value={editingEventStatus} onChange={e => setEditingEventStatus(e.target.value as 'ativo' | 'inativo')} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+          <div className="space-y-3">
+            {eventos.map(evento => {
+              const isEditing = editingEventId === evento.id;
+              return (
+                <div key={evento.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  {isEditing ? (
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <input value={editingEvent.nome} onChange={event => setEditingEvent(prev => ({ ...prev, nome: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="Nome" />
+                      <select value={editingEvent.status} onChange={event => setEditingEvent(prev => ({ ...prev, status: event.target.value as 'ativo' | 'inativo' }))} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm">
                         <option value="ativo">Ativo</option>
                         <option value="inativo">Inativo</option>
                       </select>
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => setEditingEventId(null)} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm">Cancelar</button>
-                        <button type="button" onClick={saveEditEvent} className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm">Salvar</button>
+                      <textarea value={editingEvent.descricao} onChange={event => setEditingEvent(prev => ({ ...prev, descricao: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm lg:col-span-2" rows={3} placeholder="Descricao" />
+                      <input type="date" value={editingEvent.data_inicio} onChange={event => setEditingEvent(prev => ({ ...prev, data_inicio: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" />
+                      <input type="date" value={editingEvent.data_fim} onChange={event => setEditingEvent(prev => ({ ...prev, data_fim: event.target.value }))} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm" />
+                      <div className="flex gap-2 lg:col-span-2 lg:justify-end">
+                        <button type="button" onClick={() => setEditingEventId(null)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700">Cancelar</button>
+                        <button type="button" onClick={handleSaveEvent} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Salvar</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={evento.imagem_capa || '/sample-images/science-fair.svg'}
-                          alt={evento.nome}
-                          className="h-20 w-20 rounded-xl object-cover border border-gray-200 shadow-sm"
-                        />
-                        <div>
-                        <p className="text-sm font-semibold text-gray-900">{evento.nome}</p>
-                        <p className="text-xs text-gray-500">{evento.descricao || 'Sem descricao'}</p>
-                        <p className="text-xs text-gray-500">{new Date(evento.data_inicio).toLocaleDateString('pt-BR')} ate {new Date(evento.data_fim).toLocaleDateString('pt-BR')}</p>
-                        <p className="text-xs text-gray-500">Status: {evento.status}</p>
-                        </div>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900">{evento.nome}</p>
+                        <p className="text-sm text-slate-500">{evento.descricao || 'Sem descricao'}</p>
+                        <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+                          {evento.status} • {new Date(evento.data_inicio).toLocaleDateString('pt-BR')} ate {new Date(evento.data_fim).toLocaleDateString('pt-BR')}
+                        </p>
                       </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => startEditEvent(evento.id)} className="p-2 rounded-md border border-gray-300 text-gray-600">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button type="button" onClick={() => removeEvento(evento.id)} className="p-2 rounded-md border border-red-200 text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => startEventEdit(evento)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Editar</button>
+                        <label className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 cursor-pointer">
+                          Atualizar capa
+                          <input type="file" accept="image/*" onChange={event => event.target.files?.[0] && updateEventoCapa(evento.id, event.target.files[0])} className="hidden" />
+                        </label>
+                        <button type="button" onClick={() => handleRemoveEventoCapa(evento.id)} className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-50">Remover capa</button>
+                        <button type="button" onClick={() => handleRemoveEvento(evento.id)} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50">Excluir</button>
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

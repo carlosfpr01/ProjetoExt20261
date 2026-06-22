@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useData } from '../context/DataContext.tsx';
-import type { Usuario } from '../context/DataContext.tsx';
-import { useAuth } from '../context/AuthContext';
-import { X, Save, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Save, X } from 'lucide-react';
+import { useData, type Usuario } from '../context/DataContext';
+import { SCHOOL_GRADE_OPTIONS, type SchoolGrade, toSchoolGradeLabel } from '../lib/schoolGrades';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -10,19 +9,17 @@ interface CreateProjectModalProps {
 }
 
 export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps) => {
-  const { usuarios, eventos, addProjeto } = useData();
-  const { user } = useAuth();
-  
+  const { usuarios, eventos, addProjeto, loading } = useData();
   const [titulo, setTitulo] = useState('');
   const [areaDeConhecimento, setAreaDeConhecimento] = useState('');
-  const [serie, setSerie] = useState('');
+  const [serie, setSerie] = useState<SchoolGrade | ''>('');
   const [dataApresentacao, setDataApresentacao] = useState('');
   const [eventoId, setEventoId] = useState('');
-  const [imagemCapa, setImagemCapa] = useState('/sample-images/project-volcano.svg');
-  const [imagemUploadPreview, setImagemUploadPreview] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [materiais, setMateriais] = useState('');
   const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
-  
-  const alunosDisponiveis = usuarios.filter(u => u.tipo_usuario === 'aluno');
+
+  const alunosDisponiveis = usuarios.filter(usuario => usuario.tipo_usuario === 'aluno');
 
   useEffect(() => {
     if (!isOpen) {
@@ -31,228 +28,185 @@ export const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps)
       setSerie('');
       setDataApresentacao('');
       setEventoId('');
-      setImagemCapa('/sample-images/project-volcano.svg');
-      setImagemUploadPreview('');
+      setDescricao('');
+      setMateriais('');
       setSelectedAlunos([]);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || user.tipo_usuario !== 'professor') return;
+  const handleStudentToggle = (alunoId: string) => {
+    setSelectedAlunos(prev => (prev.includes(alunoId) ? prev.filter(id => id !== alunoId) : [...prev, alunoId]));
+  };
 
-    addProjeto({
-      titulo,
-      area_de_conhecimento: areaDeConhecimento,
-      serie,
-      data_apresentacao: dataApresentacao,
-      materiais: '',
-      descricao: '',
-      imagem_capa: imagemCapa,
-      criado_por_id: user.id,
-      evento_id: eventoId || undefined,
-    }, selectedAlunos);
-    
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await addProjeto(
+      {
+        titulo,
+        descricao,
+        materiais,
+        area_de_conhecimento: areaDeConhecimento,
+        serie,
+        data_apresentacao: dataApresentacao,
+        evento_id: eventoId,
+      },
+      selectedAlunos
+    );
     onClose();
   };
 
-  const handleStudentToggle = (alunoId: string) => {
-    setSelectedAlunos(prev => 
-      prev.includes(alunoId)
-        ? prev.filter(id => id !== alunoId)
-        : [...prev, alunoId]
-    );
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      setImagemCapa(result);
-      setImagemUploadPreview(result);
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm transition-opacity">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <Plus className="h-5 w-5 text-blue-600" />
-            Criar Novo Projeto
+            Criar projeto
           </h2>
-          <button 
+          <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="titulo" className="block text-sm font-medium text-gray-700 mb-1">
-                Título do Projeto *
-              </label>
+        <form className="space-y-6 p-6" onSubmit={handleSubmit}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700 md:col-span-2">
+              <span>Titulo</span>
               <input
-                type="text"
-                id="titulo"
                 required
                 value={titulo}
-                onChange={e => setTitulo(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-                placeholder="Ex: Feira de Ciências..."
+                onChange={event => setTitulo(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Ex: Detector de pH com Arduino"
               />
-            </div>
+            </label>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
-                  Área de Conhecimento *
-                </label>
-                <input
-                  type="text"
-                  id="area"
-                  required
-                  value={areaDeConhecimento}
-                  onChange={e => setAreaDeConhecimento(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-                  placeholder="Ex: Biologia, Matemática..."
-                />
-              </div>
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+              <span>Area de conhecimento</span>
+              <input
+                required
+                value={areaDeConhecimento}
+                onChange={event => setAreaDeConhecimento(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
 
-              <div>
-                <label htmlFor="serie" className="block text-sm font-medium text-gray-700 mb-1">
-                  Série/Ano *
-                </label>
-                <select
-                  id="serie"
-                  required
-                  value={serie}
-                  onChange={e => setSerie(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white"
-                >
-                  <option value="" disabled>Selecione a série</option>
-                  <option value="6º Ano">6º Ano</option>
-                  <option value="7º Ano">7º Ano</option>
-                  <option value="8º Ano">8º Ano</option>
-                  <option value="9º Ano">9º Ano</option>
-                  <option value="1º Ano Médio">1º Ano Médio</option>
-                  <option value="2º Ano Médio">2º Ano Médio</option>
-                  <option value="3º Ano Médio">3º Ano Médio</option>
-                </select>
-              </div>
-            </div>
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+              <span>Serie</span>
+              <select
+                required
+                value={serie}
+                onChange={event => setSerie(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Selecione a serie</option>
+                {SCHOOL_GRADE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                Data de Apresentação *
-              </label>
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+              <span>Data de apresentacao</span>
               <input
                 type="date"
-                id="date"
                 required
                 value={dataApresentacao}
-                onChange={e => setDataApresentacao(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                onChange={event => setDataApresentacao(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
-            </div>
+            </label>
 
-            <div>
-              <label htmlFor="evento" className="block text-sm font-medium text-gray-700 mb-1">
-                Evento (opcional)
-              </label>
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+              <span>Evento</span>
               <select
-                id="evento"
+                required
                 value={eventoId}
-                onChange={e => setEventoId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white"
+                onChange={event => setEventoId(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="">Sem evento vinculado</option>
+                <option value="">Selecione um evento</option>
                 {eventos.map(evento => (
                   <option key={evento.id} value={evento.id}>
                     {evento.nome} ({evento.status})
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700 md:col-span-2">
+              <span>Descricao</span>
+              <textarea
+                rows={4}
+                value={descricao}
+                onChange={event => setDescricao(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Resumo do objetivo do projeto"
+              />
+            </label>
+
+            <label className="block space-y-1.5 text-sm font-medium text-slate-700 md:col-span-2">
+              <span>Materiais</span>
+              <textarea
+                rows={4}
+                value={materiais}
+                onChange={event => setMateriais(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                placeholder="Um item por linha"
+              />
+            </label>
+          </div>
+
+          <div className="space-y-3">
             <div>
-              <label htmlFor="imagemCapa" className="block text-sm font-medium text-gray-700 mb-1">
-                Imagem de capa de exemplo
-              </label>
-              <select
-                id="imagemCapa"
-                value={imagemCapa}
-                onChange={e => setImagemCapa(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white"
-              >
-                <option value="/sample-images/project-volcano.svg">Projeto Vulcao</option>
-                <option value="/sample-images/science-fair.svg">Feira de Ciencias</option>
-                <option value="/sample-images/diary-lab.svg">Diario de Bordo</option>
-              </select>
-              <label className="mt-3 flex flex-col gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-                <span className="font-medium text-gray-700">Ou anexar uma imagem do computador</span>
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="text-sm" />
-              </label>
-              {imagemUploadPreview && (
-                <img src={imagemUploadPreview} alt="Preview da capa" className="mt-3 h-40 w-full rounded-xl object-cover border border-gray-200" />
+              <h3 className="text-sm font-semibold text-slate-900">Alunos participantes</h3>
+              <p className="text-sm text-slate-500">Os convites e cadastros ja precisam ter sido concluídos para aparecerem aqui.</p>
+            </div>
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              {alunosDisponiveis.length === 0 ? (
+                <p className="text-sm text-slate-500">Nenhum aluno cadastrado ainda.</p>
+              ) : (
+                alunosDisponiveis.map((aluno: Usuario) => (
+                  <label key={aluno.id} className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm shadow-sm ring-1 ring-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedAlunos.includes(aluno.id)}
+                      onChange={() => handleStudentToggle(aluno.id)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <p className="font-medium text-slate-900">{aluno.nome}</p>
+                      <p className="text-slate-500">{toSchoolGradeLabel(aluno.ano_escolar) || 'Sem ano'} • Matricula {aluno.matricula ?? '-'}</p>
+                    </div>
+                  </label>
+                ))
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Alunos Participantes
-              </label>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto space-y-2">
-                {alunosDisponiveis.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic text-center py-2">
-                    Nenhum aluno cadastrado no sistema.
-                  </p>
-                ) : (
-                  alunosDisponiveis.map((aluno: Usuario) => (
-                    <label key={aluno.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-md transition-colors cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedAlunos.includes(aluno.id)}
-                        onChange={() => handleStudentToggle(aluno.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{aluno.nome}</p>
-                        <p className="text-xs text-gray-500">{aluno.ano_escolar} - Matrícula: {aluno.matricula}</p>
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Você poderá adicionar ou remover alunos depois.
-              </p>
             </div>
           </div>
 
-          <div className="pt-4 border-t flex justify-end gap-3 mt-6">
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" />
-              Criar Projeto
+              {loading ? 'Salvando...' : 'Criar projeto'}
             </button>
           </div>
         </form>

@@ -5,6 +5,16 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   base: '/ProjetoExt20261/',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
+      },
+    },
+  },
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them

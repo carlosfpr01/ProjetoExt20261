@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, Users, LogOut, Menu, X, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 
 export const Layout = () => {
@@ -17,7 +17,8 @@ export const Layout = () => {
 
   const navLinks = [
     { name: 'Dashboard de Projetos', href: '/', icon: LayoutDashboard },
-    ...(isTeacher ? [{ name: 'Meus Alunos', href: '/teacher', icon: Users }] : []),
+    { name: 'Mudar Senha', href: '/mudar-senha', icon: KeyRound },
+    ...(isTeacher ? [{ name: 'Painel de Gestão', href: '/teacher', icon: Users }] : []),
   ];
 
   return (
