@@ -3,7 +3,7 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-const DEFAULT_BASE_PATH = '/ProjetoExt20261/'
+const DEFAULT_GITHUB_PAGES_BASE_PATH = '/ProjetoExt20261/'
 
 const normalizeBase = (basePath?: string) => {
   if (!basePath) {
@@ -20,7 +20,7 @@ const normalizeBase = (basePath?: string) => {
 }
 
 export default defineConfig({
-  base: normalizeBase(process.env.URL_BASE ?? DEFAULT_BASE_PATH),
+  base: normalizeBase(process.env.URL_BASE ?? DEFAULT_GITHUB_PAGES_BASE_PATH),
   server: {
     proxy: {
       '/api': {
