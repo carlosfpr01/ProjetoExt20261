@@ -3,8 +3,22 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+const normalizeBase = (basePath?: string) => {
+  if (!basePath) {
+    return '/'
+  }
+
+  const trimmedBase = basePath.trim()
+
+  if (!trimmedBase || trimmedBase === '/') {
+    return '/'
+  }
+
+  return `/${trimmedBase.replace(/^\/+|\/+$/g, '')}/`
+}
+
 export default defineConfig({
-  base: '/ProjetoExt20261/',
+  base: normalizeBase(process.env.URL_BASE ?? '/ProjetoExt20261/'),
   server: {
     proxy: {
       '/api': {
