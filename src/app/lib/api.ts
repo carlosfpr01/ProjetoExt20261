@@ -1,4 +1,6 @@
-const fallbackBaseUrl = import.meta.env.DEV ? '/api' : 'http://localhost:8080';
+const fallbackBaseUrl = import.meta.env.DEV
+  ? '/api'
+  : 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? fallbackBaseUrl).replace(/\/$/, '');
 
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
