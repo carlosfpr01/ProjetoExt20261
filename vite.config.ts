@@ -6,12 +6,7 @@ import react from '@vitejs/plugin-react'
 const DEFAULT_GITHUB_PAGES_BASE_PATH = '/ProjetoExt20261/'
 
 const normalizeBase = (basePath?: string) => {
-  if (!basePath) {
-    return '/'
-  }
-
-  const trimmedBase = basePath.trim()
-
+  const trimmedBase = basePath?.trim()
   if (!trimmedBase || trimmedBase === '/') {
     return '/'
   }
