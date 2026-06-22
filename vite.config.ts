@@ -11,7 +11,7 @@ const normalizeBase = (basePath?: string) => {
     return '/'
   }
 
-  return `/${trimmedBase.replace(/^\/+|\/+$/g, '')}/`
+  return `/${trimmedBase.replace(/^\/+|\/+$/, '')}/`
 }
 
 export default defineConfig({
