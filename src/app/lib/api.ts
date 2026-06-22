@@ -1,5 +1,10 @@
-const fallbackBaseUrl = import.meta.env.DEV ? '/api' : 'http://localhost:8080';
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? fallbackBaseUrl).replace(/\/$/, '');
+const apiBaseUrl = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL;
+
+if (!apiBaseUrl) {
+  throw new Error('VITE_API_BASE_URL is not configured.');
+}
+
+const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
 
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
 
