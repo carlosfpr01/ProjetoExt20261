@@ -1,19 +1,27 @@
 const apiBaseUrl = import.meta.env.DEV
   ? '/api'
+  : `${window.location.protocol}//${window.location.hostname}:8080`;
+const s3BaseUrl = import.meta.env.DEV
+  ? '/s3'
   : `${window.location.protocol}//${window.location.hostname}:4566`;
 
 const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
+const S3_BASE_URL = s3BaseUrl.replace(/\/$/, '');
+
+function joinBaseUrl(baseUrl: string, path: string): string {
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+}
 
 function fixStorageUrl(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
     const parsed = new URL(url);
     if (parsed.hostname === 'localhost') {
-      parsed.hostname = window.location.hostname;
+      return `${S3_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }
     return parsed.toString();
   } catch {
-    return url;
+    return joinBaseUrl(S3_BASE_URL, url);
   }
 }
 
