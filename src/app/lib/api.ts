@@ -6,6 +6,14 @@ if (!apiBaseUrl) {
 
 const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
 
+const s3BaseUrl = import.meta.env.VITE_S3_BASE_URL;
+
+if (!s3BaseUrl) {
+  throw new Error('VITE_S3_BASE_URL is not configured.');
+}
+
+export const S3_BASE_URL = s3BaseUrl.replace(/\/$/, '');
+
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
 
 let pendingApiRequests = 0;

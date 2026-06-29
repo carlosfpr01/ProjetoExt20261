@@ -6,10 +6,14 @@ import react from '@vitejs/plugin-react'
 const defaultBackendApiTarget = 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev'
 const backendApiTarget = process.env.VITE_API_BASE_URL ?? defaultBackendApiTarget
 
+const defaultS3Target = 'https://fantastic-potato-r4gpqxjj7v693x59g-4566.app.github.dev'
+const s3Target = process.env.VITE_S3_BASE_URL ?? defaultS3Target
+
 export default defineConfig({
   base: '/ProjetoExt20261/',
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(backendApiTarget),
+    'import.meta.env.VITE_S3_BASE_URL': JSON.stringify(s3Target),
   },
   server: {
     proxy: {
