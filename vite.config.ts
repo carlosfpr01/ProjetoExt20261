@@ -3,26 +3,26 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-const DEFAULT_GITHUB_PAGES_BASE_PATH = '/ProjetoExt20261/'
-
-const normalizeBase = (basePath?: string) => {
-  const trimmedBase = basePath?.trim()
-  if (!trimmedBase || trimmedBase === '/') {
-    return '/'
-  }
-
-  return `/${trimmedBase.replace(/^\/+|\/+$/, '')}/`
-}
+const defaultBackendApiTarget = 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev'
+const backendApiTarget = process.env.BASE_URL ?? defaultBackendApiTarget
+const defaultBackendS3Target = 'https://fantastic-potato-r4gpqxjj7v693x59g-4566.app.github.dev'
+const backendS3Target = process.env.S3_BASE_URL ?? defaultBackendS3Target
 
 export default defineConfig({
   base: normalizeBase(process.env.URL_BASE ?? DEFAULT_GITHUB_PAGES_BASE_PATH),
   server: {
     proxy: {
       '/api': {
-        target: 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev',
+        target: backendApiTarget,
         changeOrigin: true,
         secure: false,
         rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
+      },
+      '/s3': {
+        target: backendS3Target,
+        changeOrigin: true,
+        secure: false,
+        rewrite: (requestPath) => requestPath.replace(/^\/s3/, ''),
       },
     },
   },

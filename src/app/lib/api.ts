@@ -1,5 +1,29 @@
-const fallbackBaseUrl = import.meta.env.DEV ? '/api' : 'http://localhost:8080';
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? fallbackBaseUrl).replace(/\/$/, '');
+const apiBaseUrl = import.meta.env.DEV
+  ? '/api'
+  : `${window.location.protocol}//${window.location.hostname}:8080`;
+const s3BaseUrl = import.meta.env.DEV
+  ? '/s3'
+  : `${window.location.protocol}//${window.location.hostname}:4566`;
+
+const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
+const S3_BASE_URL = s3BaseUrl.replace(/\/$/, '');
+
+function joinBaseUrl(baseUrl: string, path: string): string {
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+function fixStorageUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'localhost') {
+      return `${S3_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+    return parsed.toString();
+  } catch {
+    return joinBaseUrl(S3_BASE_URL, url);
+  }
+}
 
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
 
@@ -279,7 +303,7 @@ function mapEvent(raw: Record<string, unknown>): EventSummary {
     id: String(raw.id ?? ''),
     nome: String(raw.nome ?? raw.titulo ?? ''),
     descricao: raw.descricao ? String(raw.descricao) : undefined,
-    imagem_capa: raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined,
+    imagem_capa: fixStorageUrl(raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined),
     data_inicio: String(raw.dataInicio ?? ''),
     data_fim: String(raw.dataFim ?? ''),
     status: normalizeEventStatus((raw.situacao ?? raw.status) as string | undefined),
@@ -301,7 +325,7 @@ function mapProject(raw: Record<string, unknown>): ProjectSummary {
     titulo: String(raw.titulo ?? ''),
     materiais: stringifyMaterials(raw.materiais),
     descricao: raw.descricao ? String(raw.descricao) : '',
-    imagem_capa: raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined,
+    imagem_capa: fixStorageUrl(raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined),
     data_criacao: String(raw.dataCriacao ?? new Date().toISOString()),
     data_apresentacao: String(raw.dataApresentacao ?? ''),
     situacao: normalizeProjectStatus((raw.situacao ?? raw.status) as string | undefined),
@@ -340,7 +364,7 @@ function mapDiaryFile(raw: Record<string, unknown>, registroId: string): DiaryFi
     registro_diario_id: registroId,
     base_64: '',
     nome: raw.nome ? String(raw.nome) : undefined,
-    url: raw.url ? String(raw.url) : undefined,
+    url: fixStorageUrl(raw.url ? String(raw.url) : undefined),
     chave: raw.chave ? String(raw.chave) : undefined,
   };
 }
