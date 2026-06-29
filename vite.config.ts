@@ -9,7 +9,7 @@ const defaultBackendS3Target = 'https://fantastic-potato-r4gpqxjj7v693x59g-4566.
 const backendS3Target = process.env.S3_BASE_URL ?? defaultBackendS3Target
 
 export default defineConfig({
-  base: '/ProjetoExt20261/',
+  base: normalizeBase(process.env.URL_BASE ?? DEFAULT_GITHUB_PAGES_BASE_PATH),
   server: {
     proxy: {
       '/api': {
