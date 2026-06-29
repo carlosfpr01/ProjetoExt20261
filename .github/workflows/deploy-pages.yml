@@ -34,8 +34,6 @@ jobs:
         run: npm ci
 
       - name: Build
-        env:
-          URL_BASE: ${{ vars.URL_BASE }}
         run: npm run build
 
       - name: SPA fallback for GitHub Pages
