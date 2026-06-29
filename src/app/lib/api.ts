@@ -4,6 +4,19 @@ const apiBaseUrl = import.meta.env.DEV
 
 const API_BASE_URL = apiBaseUrl.replace(/\/$/, '');
 
+function fixStorageUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'localhost') {
+      parsed.hostname = window.location.hostname;
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export const API_LOADING_EVENT = 'edu-projetos:api-loading-change';
 
 let pendingApiRequests = 0;
@@ -282,7 +295,7 @@ function mapEvent(raw: Record<string, unknown>): EventSummary {
     id: String(raw.id ?? ''),
     nome: String(raw.nome ?? raw.titulo ?? ''),
     descricao: raw.descricao ? String(raw.descricao) : undefined,
-    imagem_capa: raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined,
+    imagem_capa: fixStorageUrl(raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined),
     data_inicio: String(raw.dataInicio ?? ''),
     data_fim: String(raw.dataFim ?? ''),
     status: normalizeEventStatus((raw.situacao ?? raw.status) as string | undefined),
@@ -304,7 +317,7 @@ function mapProject(raw: Record<string, unknown>): ProjectSummary {
     titulo: String(raw.titulo ?? ''),
     materiais: stringifyMaterials(raw.materiais),
     descricao: raw.descricao ? String(raw.descricao) : '',
-    imagem_capa: raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined,
+    imagem_capa: fixStorageUrl(raw.imagemCapaUrl ? String(raw.imagemCapaUrl) : raw.capaUrl ? String(raw.capaUrl) : undefined),
     data_criacao: String(raw.dataCriacao ?? new Date().toISOString()),
     data_apresentacao: String(raw.dataApresentacao ?? ''),
     situacao: normalizeProjectStatus((raw.situacao ?? raw.status) as string | undefined),
@@ -343,7 +356,7 @@ function mapDiaryFile(raw: Record<string, unknown>, registroId: string): DiaryFi
     registro_diario_id: registroId,
     base_64: '',
     nome: raw.nome ? String(raw.nome) : undefined,
-    url: raw.url ? String(raw.url) : undefined,
+    url: fixStorageUrl(raw.url ? String(raw.url) : undefined),
     chave: raw.chave ? String(raw.chave) : undefined,
   };
 }
