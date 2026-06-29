@@ -3,9 +3,9 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-const defaultBackendApiTarget = 'http://localhost:8080'
+const defaultBackendApiTarget = 'https://fantastic-potato-r4gpqxjj7v693x59g-8080.app.github.dev'
 const backendApiTarget = process.env.BASE_URL ?? defaultBackendApiTarget
-const defaultBackendS3Target = 'http://localhost:4566'
+const defaultBackendS3Target = 'https://fantastic-potato-r4gpqxjj7v693x59g-4566.app.github.dev'
 const backendS3Target = process.env.S3_BASE_URL ?? defaultBackendS3Target
 
 export default defineConfig({
