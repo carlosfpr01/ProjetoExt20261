@@ -3,8 +3,10 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-const defaultBackendApiTarget = 'http://localhost:4566'
-const backendApiTarget = process.env.VITE_API_BASE_URL ?? defaultBackendApiTarget
+const defaultBackendApiTarget = 'http://localhost:8080'
+const backendApiTarget = process.env.BASE_URL ?? defaultBackendApiTarget
+const defaultBackendS3Target = 'http://localhost:4566'
+const backendS3Target = process.env.S3_BASE_URL ?? defaultBackendS3Target
 
 export default defineConfig({
   base: '/ProjetoExt20261/',
@@ -15,6 +17,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: (requestPath) => requestPath.replace(/^\/api/, ''),
+      },
+      '/s3': {
+        target: backendS3Target,
+        changeOrigin: true,
+        secure: false,
+        rewrite: (requestPath) => requestPath.replace(/^\/s3/, ''),
       },
     },
   },
